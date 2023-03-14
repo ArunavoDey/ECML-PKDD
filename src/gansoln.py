@@ -140,6 +140,7 @@ if __name__ == "__main__":
   #  tf.config.experimental.set_memory_growth(gpu, True)
   #if gpus:
   #  tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
+  os.chdir("../../../")
   use_msg = "Usage: " + sys.argv[0] + " input_filename"
   if len(sys.argv) < 2:
     print(use_msg)
@@ -147,139 +148,58 @@ if __name__ == "__main__":
   #tf.debugging.set_log_device_placement(True)
   print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
   #tf.debugging.set_log_device_placement(True)
-  path_to_source = sys.argv[1] #"/content/drive//MyDrive/Pascal-BFS.csv" 
-  path_to_target = sys.argv[2] #"/content/drive/MyDrive/Turing-SSSP.csv"
-  path_to_target2 = sys.argv[3]
-  path_to_target3 = sys.argv[4]
-  ep1 = int(sys.argv[5])
-  trials1 = int(sys.argv[6])
-  shot = sys.argv[7]
-  fold = int(sys.argv[8])
-  stdy = sys.argv[9]
-  storageN = sys.argv[10]
-  stdy2 = sys.argv[11]
-  storageN2 = sys.argv[12]
-  dchoice = int(sys.argv[13])
-  target_domain1 = sys.argv[14]
-  target_domain2 = sys.argv[15]
-  target_domain3 = sys.argv[16]
-  size = int(sys.argv[17])
-  scaler = MinMaxScaler()
-  data = pd.read_csv(path_to_source)
-  dataP = pd.read_csv(path_to_target)
-  dataP2 = pd.read_csv(path_to_target2)
-  dataP3 = pd.read_csv(path_to_target3)
-  print("data reading done")
-  data = data.dropna(axis=0)
-  #data = data.loc[data['ts']>1000]
-  #data = data.loc[data['ts']<10000]
-  #data['ts'] = np.log(data['ts'])
-  dataP = dataP.dropna(axis=0)
-  dataP2 = dataP2.dropna(axis=0)
-  dataP3 = dataP3.dropna(axis=0)
-  """  
-  tm = "kernel_time"
-  data[tm] = np.log(data[tm])
-  dataP[tm] = np.log(dataP[tm])
-  dataP2[tm] = np.log(dataP2[tm])
-  dataP3[tm] = np.log(dataP3[tm])
-  """
-  data = data.drop("graph_name",axis =1)
-  dataP = dataP.drop("graph_name",axis =1)
-  dataP2 = dataP2.drop("graph_name",axis =1)
-  dataP3 = dataP3.drop("graph_name",axis=1)
-  data = data.drop("d2h_time",axis =1)
-  dataP = dataP.drop("d2h_time",axis =1)
-  dataP2 = dataP2.drop("d2h_time",axis =1)
-  dataP3 = dataP3.drop("d2h_time", axis=1)
-  
- 
-  if dchoice==0:
-    data = data.drop("h2d_time",axis =1)
-    dataP2 = dataP2.drop("h2d_time",axis =1)
-    dataP3 = dataP3.drop("h2d_time",axis =1)
-  elif dchoice==1:
-    data = data.drop("h2d_time",axis =1)
-    dataP = dataP.drop("h2d_time",axis =1)
-    dataP3 = dataP3.drop("h2d_time",axis =1)
-  else:
-    dataP2 = dataP2.drop("h2d_time", axis =1)
-    dataP = dataP.drop("h2d_time",axis =1)
-    dataP3 = dataP3.drop("h2d_time",axis =1)
-  
- 
-  data = data.loc[data['kernel_time']>0]
-  dataP = dataP.loc[dataP['kernel_time']>0]
-  dataP2 = dataP2.loc[dataP2['kernel_time']>0]
-  dataP3 = dataP3.loc[dataP3['kernel_time']>0]
-  data = data.loc[data['kernel_time']<1]
-  dataP = dataP.loc[dataP['kernel_time']<1]
-  dataP2 = dataP2.loc[dataP2['kernel_time']<1]
-  dataP3 = dataP3.loc[dataP3['kernel_time']<1]
-  
-  tm = "kernel_time"
-  data[tm] = np.log(data[tm])
-  dataP[tm] = np.log(dataP[tm])
-  dataP2[tm] = np.log(dataP2[tm])
-  dataP3[tm] = np.log(dataP3[tm])
+  src_path = sys.argv[1] #"/content/drive//MyDrive/Pascal-BFS.csv" 
+  tar_path = sys.argv[2] #"/content/drive/MyDrive/Turing-SSSP.csv"
+  ep1 = int(sys.argv[3])
+  trials1 = int(sys.argv[4])
+  shot = sys.argv[5]
+  fold = int(sys.argv[6])
+  stdy = sys.argv[7]
+  storageN = sys.argv[8]
+  stdy2 = sys.argv[9]
+  storageN2 = sys.argv[10]
+  target_domain1 = sys.argv[11]
+  size = int(sys.argv[12])
+  target_label = sys.argv[13]
+  test_split = float(sys.argv[14])
+  val_split = float(sys.argv[15])
+  rand_state = int(sys.argv[16])
+  rand_state2 = int(sys.argv[17])
+  result_path = os.getcwd()+sys.argv[18]
+  model_path = os.getcwd()+sys.argv[19]
+  chck_path = os.getcwd()+sys.argv[20]
 
-
-  data_c = converter(data)
-  data2_c = converter(dataP)
-  data3_c = converter(dataP2)
-  data4_c = converter(dataP3)
-  data_c = deleter(data_c)
-  
-  data2_c = deleter(data2_c)
-  data3_c = deleter(data3_c)
-  data4_c = deleter(data4_c)
-  targetMetric1 = "kernel_time"
-  targetMetric2 = "kernel_time"
-  targetMetric3 = "kernel_time"
-  targetMetric4 = "kernel_time"
-  
-  data_c = data_c.reset_index(drop=True)
-  data2_c = data2_c.reset_index(drop=True)
-  data3_c = data3_c.reset_index(drop=True)
-  data4_c = data4_c.reset_index(drop=True)
+  loader = dataLoader(src_path, tar_path)
+  loader.loadData()
+  #src_x, src_y, tar_x, tar_y = loader.getXY("ccgrid", None, "","teps",['graph_name','kernel_time','d2h_time','h2d_time','device','teps'])
+  src_x, src_y, tar_x, tar_y = loader.getXY("", "",target_label)
+  print("Src x shape before preprocessing")
+  print(src_x.shape)
+  print("Tar_x shape before preprocessing")
+  print(tar_x.shape)
+  #print(f"{tar_x.shape}, {tar_y.shape}")
+  p = preprocessor(src_x, src_y, tar_x, tar_y, 0)
+  p.preprocess()
+  tar_x_scaled, tar_y_scaled = p.getTargetScaled()
+  """# **Train Test validation**"""
+  X_train, y_train, src_train, src_y_train, src_val, src_y_val, X_test, y_test = p.train_test_val( test_split, val_split, rand_state, rand_state2)
  
   #targetMetric1 = "ts"
-  Lb = data_c[targetMetric1]
-  lb = data2_c[targetMetric2]
-  mb = data3_c[targetMetric3]
-  nb = data4_c[targetMetric4]
-  data_c= data_c.drop(targetMetric1,axis =1)
-  data2_c= data2_c.drop(targetMetric2,axis =1)
-  data3_c= data3_c.drop(targetMetric3,axis =1)
-  data4_c= data4_c.drop(targetMetric4,axis =1)
-  normalized_data = scaler.fit_transform(data_c)
-  normalized_data2 = scaler.transform(data2_c)
-  normalized_data3 = scaler.transform(data3_c)
-  normalized_data4 = scaler.transform(data4_c)
-  X = normalized_data
+  Lb = y_train
+  lb = tar_y_scaled
+  X = X_train
   Y = Lb
-  x = normalized_data2
+  x = tar_x_scaled
   y = lb
-  M = normalized_data3
-  m = mb
-  N = normalized_data4
-  n = nb
   print("Data pre processing done")
   #dataset = (tf.data.Dataset.from_tensor_slices((tf.cast(X, tf.float64), tf.cast(Y, tf.float64) )) )
   #dataset = dataset.repeat().shuffle(10000).batch(128)
   try:
     with tf.device('/gpu:0'):
       X1 = tf.convert_to_tensor(X, dtype = tf.float64)
-      
       x1 = tf.convert_to_tensor(x, dtype = tf.float64)
-      xm = tf.convert_to_tensor(M, dtype = tf.float64)
-      xn = tf.convert_to_tensor(N, dtype = tf.float64)
-      
       Lb1= tf.convert_to_tensor(Lb, dtype = tf.float64)
-      
       lb1= tf.convert_to_tensor(lb, dtype = tf.float64)
-      lbm= tf.convert_to_tensor(mb, dtype = tf.float64)
-      lbn= tf.convert_to_tensor(nb, dtype = tf.float64)
       
       workbook = xlsxwriter.Workbook(f"/home1/08389/hcs77/{shot}-Results-with-subspace-1.xlsx")
       worksheet = workbook.add_worksheet()
@@ -318,62 +238,51 @@ if __name__ == "__main__":
       f = open(f"/home1/08389/hcs77/{shot}-{target_domain1}-indices.txt", "r")
       nums = f.readlines()
       index =0
-      while size <= 25:
-        for pos in range(3):
-          col = 0
-          worksheet.write(row, col, shot)
-          worksheet.write(row, col + 1, target_domain1)
-          worksheet.write(row, col + 2, size)
-          worksheet.write(row, col + 3, pos)
-          #row += 1
-          #predictorModel = optunannPOD.create_model(neurons_input= nuron_num, num_of_layers_1= num_layers, lr= lr_rate, actF="relu", lossF="mean_squared_error")
-          #predictorModel.load_weights(f"/home1/08389/hcs77/{shot}/Trial-{trial_num}-model")
-          #predictorModel.load_weights(f"/home1/08389/hcs77/CCGrid/{shot}-model ")
-       
-          #predictorModel.layers[0].trainable = False
-          #predictorModel.layers[1].trainable = False       
-          print("x1 len")
-          print(len(x1))
+      for i in range(5):
+        fileI = open(f"{result_path}csv/Source-model-on-target-{target_app}-LP{num_of_frozen_layers}-results-{i}.csv", "w")
+        writer = csv.writer(fileI)
+        for j in range(1,10):
+          indices = open(f"{result_path}indices/Source-model-on-target-{target_app}-LP-1-indices-{i}-{j}-percent.csv", "r" )
+          dropIndices = []
+          rowArr = []
           x2 =[]
           lb2 = []
-          dropIndices = []
-          line = nums[index]
-          #print("lines")
-          #print(line)
-          #print(x1.shape)
-          # = data.dropna(axis=0)
-          indices = line.split()
-          for i in range(size):
-            rI = int(indices[i])
-            print("rI")
-            print(rI)
-            if tf.math.count_nonzero(x1[rI:rI+1])>0:
-              x2.append(x1[rI:rI+1])
-              lb2.append(lb1[rI:rI+1])
-              dropIndices.append(rI)
-          print("before x2")
-          print(len(x2))
+          totallen = len(tar_x_scaled)
+          loaded_indices = indices.readlines()
+          z = 0
+          for k in range(num_of_samples):
+            #print(f"len of tar_x_scaled is now {len(tar_x_scaled)}")
+            if readModeOn ==True:
+              index =  int(loaded_indices[z]) #
+            else:
+              index = random.randint(0, totallen-1 ) #int(nums[i])
+              indices.write(str(index))
+              indices.write(" ")
+              indices.write("\n")
+              #print(index)
+          dropIndices.append(index)
+          z = z + 1
+          x2.append(tar_x_scaled[index:index+1])
+          lb2.append(tar_y_scaled[index:index+1])
+          tar_x_scaled = np.delete(tar_x_scaled, index, 0)
+          tar_y_scaled = np.delete(tar_y_scaled, index, 0)
+          totallen -= 1
+          indices.close()
+
           x2 = tf.convert_to_tensor( x2, dtype=tf.float64)
           lb2 = tf.convert_to_tensor( lb2, dtype=tf.float64)
           x2 = tf.reshape(x2, (x2.shape[0], x2.shape[2]))
-          lb2 = tf.reshape(lb2, lb2.shape[0])
-
+          lb2 = tf.reshape(lb2, (lb2.shape[0], lb2.shape[2]))
+          
           #predictorModel.fit(x2, lb2, epochs=50)
           
-          td2 = data2_c.drop(labels=dropIndices, axis=0)
-          tx = scaler.transform(td2)
-          tx1 = tf.convert_to_tensor(tx, dtype = tf.float64)
-          tlb = lb.drop(labels=dropIndices, axis=0)
-          tlb1 = tf.convert_to_tensor(tlb, dtype = tf.float64)
-          
-          
-          subspace_representation6 = subspacejsoptunaE.finder(X1, x2, Lb1, lb2, epochs=ep1, checkpoint_path=f"/home1/08389/hcs77/subspace/{target_domain1}/{size}/{pos}/", num_of_trials=trials1, log_stepsP= 0, stname=f"{stdy}-{size}-{pos}", storageName = storageN)        
-          model = subspacejsoptunaE.Autoencoder(intermediate_dim=X1.shape[1], original_dim1=X1.shape[1], original_dim2=x2.shape[1], numOfLayers=subspace_representation6.params["num_layers"],neurons=subspace_representation6.params["neuron"], activation="relu")
+          subspace_parameters = subspacejsoptunaE.finder(X1, x2, Lb1, lb2, epochs=ep1, checkpoint_path=f"{chck_path}{target_app}-subspace/", num_of_trials=trials1, log_stepsP= 0, stname = stdy, storageName = storageN)        
+          model = subspacejsoptunaE.Autoencoder(intermediate_dim=X1.shape[1], original_dim1=X1.shape[1], original_dim2=x2.shape[1], numOfLayers=subspace_parameters.params["num_layers"],neurons=subspace_parameters.params["neuron"], activation="relu")
           model.load_weights(f"/home1/08389/hcs77/subspace/{target_domain1}/{size}/{pos}/Loss Type-0-Trial-{subspace_representation6.number}-model")
           newX6 = model.getEncoded1(X1)
-          newx6 = model.getEncoded2(tx1)
+          newx6 = model.getEncoded2(tar_x_scaled)
         
-          nnparameters = optunannPOD.finder(newX6, Lb1, epochs= ep1, checkpoint_path=f"/home1/08389/hcs77/waste/", num_of_trials=trials1, fold=10, stname=f"{stdy2}-{size}-{pos}", storageName = storageN2)
+          nnparameters = optunannPOD.finder(newX6, Lb1, epochs= ep1, checkpoint_path=f"{chck_path2}{target_app}-NN/" , num_of_trials=trials1, fold=10, stname = stdy2, storageName = storageN2)
           predictorModel = optunannPOD.create_model(neurons_input= int(nnparameters.params['neuron']), num_of_layers_1=int(nnparameters.params['num_layers']), lr= float(nnparameters.params['lr2']), actF="relu", lossF="mean_squared_error")
           predictorModel.fit(newX6, Lb1, epochs=1000, verbose=0)
           

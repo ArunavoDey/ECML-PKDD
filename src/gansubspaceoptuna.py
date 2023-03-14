@@ -357,11 +357,11 @@ def make_discriminator_model(intermediate_dim):
       #,kernel_initializer=initializer
     ))
     model.add(tf.keras.layers.LeakyReLU())
-    model.add(tf.keras.layers.Dropout(0.3))
+    #model.add(tf.keras.layers.Dropout(0.3))
 
     model.add(tf.keras.layers.Dense(units=intermediate_dim/2))
     model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+    #model.add(layers.Dropout(0.3))
 
     model.add(layers.Dense(1))
 
@@ -377,7 +377,7 @@ def generator_loss(fake_output):
   cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
   return cross_entropy(tf.ones_like(fake_output), fake_output)
 
-def loss(model, model2, original, test, Labels, lossType):
+def loss(model, model2, original, test, Labels, lossType, alpha1, alpha2, beta1, beta2, gamma1, gamma2, delta1, delta2):
   value1, value2 = model(original, test)
   #print("Loss 1.0 value1", value1)
   #print("Loss 1.0 original", original)
@@ -481,21 +481,6 @@ def loss(model, model2, original, test, Labels, lossType):
     js_pq1 = compute_js(q, q1)
     
     
-    #print("sq1")
-    #print(sq1)
-    #print("sq2")
-    #print(sq2)
-    #print("fs")
-    #print(fs)
-    #print("MIR")
-    #print(MIR)
-    #print("js_pq")
-    #print(js_pq)
-    #print("js_pq1")
-    #print(js_pq1)
-    
-    
-    
     if math.isnan(sq1):
       sq1=0
     if math.isnan(sq2):
@@ -513,24 +498,10 @@ def loss(model, model2, original, test, Labels, lossType):
     if math.isnan(fs):
       fs=0
       
-    """
-    if type(sq1)!=float and type(sq1)!= int:
-      sq1=0
-    if type(sq2)!=float and type(sq2)!= int:
-      sq2=0
-    if type(kl_loss)!=float and type(kl_loss)!= int:
-      kl_loss=0
-    if type(MIR)!= float and type(MIR)!= int:
-      MIR=0
-    if type(js_pq)!=float and type(js_pq)!= int:
-      js_pq=0
-    if type(js_pq1)!=float and type(js_pq1)!= int:
-      js_pq1=0
-    """
     
     #reconstruction_error = (0.15*sq1) + (0.3*kl_loss) + (0.15*sq2) + (0.2*MIR) + (0.1*js_pq) + (0.1*js_pq1)
     fs = tf.cast(fs, tf.float64)
-    reconstruction_error = (0.15*sq1) + (0.3*fs) + (0.15*sq2) + (0.2*MIR) + (0.1*js_pq) + (0.1*js_pq1)
+    reconstruction_error = (alpha1*sq1) + (beta1*fs) + (alpha2*sq2) + (gamma1*MIR) + (delta1*js_pq) + (delta2*js_pq1)
     #reconstruction_error = sq1+ sq2 
     #print("Reconstruction error")
     #print(reconstruction_error)
@@ -619,7 +590,8 @@ def loss(model, model2, original, test, Labels, lossType):
     if math.isnan(sq2):
       sq2=0
     reconstruction_error = sq1+ sq2 
-  """elif lossType == 3:
+  """
+  elif lossType == 3:
     reconstruction_error = ((sq1+sq2)/2)+d
   elif lossType == 4:
     reconstruction_error = ((sq1+sq2)/2)+tf.cast((reg1-reg2), tf.float32)+ws_loss
@@ -634,11 +606,11 @@ def loss(model, model2, original, test, Labels, lossType):
   #print(reconstruction_error)
   return reconstruction_error, ts
 
-def train( model, discModel, opt, discOpt, original, test, original_labels, lossType, loss1 = loss):
+def train( model, discModel, opt, discOpt, original, test, original_labels, lossType, alpha1, alpha2, beta1, beta2, gamma1, gamma2, delta1, delta2, loss1 = loss):
   with tf.GradientTape() as tape, tf.GradientTape() as disc_tape:
     tape.watch(model.trainable_variables)
     #disc_tape.watch(discModel.trainable_variables)
-    ls, ls2 = loss1(model, discModel, original, test, original_labels, lossType)
+    ls, ls2 = loss1(model, discModel, original, test, original_labels, lossType, alpha1, alpha2, beta1, beta2, gamma1, gamma2, delta1, delta2)
     #print("loss is ",ls)
     if (ls != 0):
       gradients = tape.gradient(ls, model.trainable_variables)
@@ -685,7 +657,7 @@ def kfoldValidation(module, model, X, Y, fold):
     fold_no += 1
   return loss_per_fold, mse_per_fold, mae_per_fold
 
-def subspace_generator(original, test, original_labels, numOfLayersI, neuronsI, activationI, epochs=1000, lr=0.01, log_steps=1000,):
+def subspace_generator(original, test, original_labels, numOfLayersI, neuronsI, activationI, alpha1, alpha2, beta1, beta2, gamma1, gamma2, delta1, delta2, epochs=1000, lr=0.01, loss_type=1000):
 
   intermediate_dim = 64
   if original.shape[1]<test.shape[1]:
@@ -702,17 +674,9 @@ def subspace_generator(original, test, original_labels, numOfLayersI, neuronsI, 
     tes = tf.convert_to_tensor(tes, dtype=tf.float64)
     labels = tf.convert_to_tensor(labels, dtype=tf.float64) 
 
-    ls = train(model, optimizer, org, tes, labels, log_steps)
-    #loss_value = loss(model, org, tes)
-    #print("inside loss is ",loss_value)
-    #total_loss += (loss_value)
+    ls = train(model, optimizer, org, tes, labels, loss_type, alpha1, alpha2, beta1, beta2, gamma1, gamma2, delta1, delta2 )
     losses.append(ls)
 
-  #plt.plot(losses)
-  #plt.title('Train cur Loss Vs Time steps')
-  #plt.show()
-  #plt.plot(losses)
-  #print("Avg loss over the epochs is ", total_loss/epoch)
   return model
 
 #checkpoint_path = "training_2/cp-{epoch:04d}.ckpt"
@@ -727,7 +691,7 @@ def subspace_generator(original, test, original_labels, numOfLayersI, neuronsI, 
 # Save the weights using the `checkpoint_path` format
 #model.save_weights(checkpoint_path.format(epoch=0))
 class Objective(object):
-  def __init__(self, originalP, testP, original_labelsP, log_steps, turn, cp_path):
+  def __init__(self, originalP, testP, original_labelsP, loss_type, turn, chck_path):
     # Hold this implementation specific arguments as the fields of the class.
     self.org = originalP
     self.tes = testP
@@ -739,28 +703,33 @@ class Objective(object):
     #self.org = tf.convert_to_tensor(self.org, dtype=tf.float32)
     #self.tes = tf.convert_to_tensor(self.tes, dtype=tf.float32)
     #self.labels = tf.convert_to_tensor(self.labels, dtype=tf.float32) 
-    self.log_steps = log_steps
+    self.loss_type = loss_type
     self.intermediate_dim1 = 64
     self.nol = turn
-    self.savingPath = cp_path
+    self.chck_Path = chck_path
     if self.org.shape[1]<self.tes.shape[1]:
       self.intermediate_dim1 = self.org.shape[1]
     else:
       self.intermediate_dim1 = self.tes.shape[1]
   def __call__(self, trial):
-    # Calculate an objective
-    # epochs =trial.suggest_int(epoch)
-    #epochs =trial.suggest_int('epochs{}', low =10, high =100, step=50)
-    num_layers = trial.suggest_int('num_layers', 1, 5)
-    neuron = trial.suggest_int('neuron', low=10, high=1000, step=10)
-    #optimizer_name = "Adam" #trial.suggest_categorical("optimizer", ["Adam", "Adagrad","Adadelta","SGD","RMSprop"])
-    #lr = trial.suggest_float("lr", low=1e-5, high=1e-1, step=1e-1) 
-    lr = trial.suggest_loguniform('lr', 1e-5, 1e-1) 
+    num_layers = trial.suggest_int('num_layers', 1, 10, 2)
+    neuron = trial.suggest_categorical("neuron", [10, 50, 100, 200, 300, 500, 600, 800, 900, 1000] )
+    batch_size = trial.suggest_int('batch_size', low = 50, high = 300, step=50)
+    lr = trial.suggest_categorical("lr", [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0])
+    lr2 = trial.suggest_categorical("lr2", [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0])
+    alpha1 = trial.suggest_categorical("alpha1", [.2, .30] )
+    alpha2 = trial.suggest_categorical("alpha2", [.2, .30] )
+    beta1 = trial.suggest_categorical("beta1", [.2, .30] )
+    beta2 = 0
+    gamma1 = 1- (alpha1+ alpha2+beta1)
+    gamma2 = 0
+    delta1 = 0
+    delta2 = 0
     model = Autoencoder(intermediate_dim = self.intermediate_dim1, original_dim1=self.org.shape[1], original_dim2=self.tes.shape[1], numOfLayers = num_layers, neurons = neuron, activation="relu")
     discriminator = make_discriminator_model(intermediate_dim = self.intermediate_dim1)
     #decision = discriminator(generated_image)
     optimizer = keras.optimizers.Adam(learning_rate=lr)
-    discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    discriminator_optimizer = tf.keras.optimizers.Adam(lr2)
     cp_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath = self.savingPath+ "training_2/cp-{epoch:04d}.ckpt", 
     verbose=1, 
@@ -770,47 +739,22 @@ class Objective(object):
     total_loss = 0
     ls = 0
     for epoch in range(self.nol):
-      #epoch = trial.suggest_int('epoch', low=100, high=1000, step=100)
-      ls = train(model, discriminator, optimizer, discriminator_optimizer, self.org, self.tes, self.labels, self.log_steps)
-      #loss_value = loss(model, org, tes)
-      #print("inside loss is ",loss_value)
-      #total_loss += (loss_value)
-      losses.append(ls)
+      ls = train(model, discriminator, optimizer, discriminator_optimizer, self.org, self.tes, self.labels, self.loss_type, alpha1, alpha2, beta1, beta2, gamma1, gamma2, delta1, delta2 )
       trial.report(ls, epoch)
-      """if ls>min(losses):
-          trigger_times+=1
-          if trigger_times>= patience:
-            print('Early Stopping! ')
-            break
-        else: trigger_times=0"""
       if trial.should_prune():
           raise optuna.exceptions.TrialPruned()
-    # save weights
-    model.save_weights(self.savingPath+f"Loss Type-{self.log_steps}-Trial-{trial.number}-model")
+    model.save_weights(self.chck_path+f"Loss Type-{self.loss_type}-Trial-{trial.number}-model")
     return ls
 
-def finder(originalP, testP, original_labelsP, epochs, checkpoint_path, num_of_trials,  log_stepsP, stname, storageName):
+def finder(originalP, testP, original_labelsP, epochs, checkpoint_path, num_of_trials, loss_type, stname, storageName):
   tf.debugging.set_log_device_placement(True)	
   with tf.device('/GPU:0'):	
     #study = optuna.create_study(direction="minimize")
-    study.optimize(Objective(originalP, testP, original_labelsP, log_stepsP, epochs, checkpoint_path), n_trials= num_of_trials, gc_after_trial=True)
+    study.optimize(Objective(originalP, testP, original_labelsP, loss_type, epochs, checkpoint_path), n_trials= num_of_trials, gc_after_trial=True)
     
-    obj = Objective(originalP, testP, original_labelsP, test_labelsP, log_stepsP, epochs, checkpoint_path)
+    obj = Objective(originalP, testP, original_labelsP, test_labelsP, loss_type, epochs, checkpoint_path)
     loaded_study = optuna.load_study(study_name=stname, storage=storageName)
     #obj = Objective(targetP, target_labelsP, source_dim, epochs, checkpoint_path, reg_nuron, reg_layers, reg_rate, reg_path)
     loaded_study.optimize(obj, n_trials= num_of_trials, callbacks=[obj.callback], gc_after_trial=True)
     trial = loaded_study.best_trial
-
-
-
-    #print("Number of finished trials: ", len(study.trials))
-  
-    #print("Best trial:")
-    #trial = study.best_trial
-    #print("Min Loss : ", trial.value)
-    #print("By Trial No: ", study.best_trial.number)
-  
-    """print("  Params: ")
-    for key, value in trial.params.items():
-    print("    {}: {}".format(key, value))  """
   return trial
