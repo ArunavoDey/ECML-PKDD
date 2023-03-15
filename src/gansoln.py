@@ -201,10 +201,6 @@ if __name__ == "__main__":
       Lb1= tf.convert_to_tensor(Lb, dtype = tf.float64)
       lb1= tf.convert_to_tensor(lb, dtype = tf.float64)
       
-      workbook = xlsxwriter.Workbook(f"/home1/08389/hcs77/{shot}-Results-with-subspace-1.xlsx")
-      worksheet = workbook.add_worksheet()
-      row = 0
-      col = 0
       """
       nnparameters = optunannPOD.finder(X1, Lb1, epochs= ep1, checkpoint_path=f"/home1/08389/hcs77/{shot}/", num_of_trials=trials1, fold=10, stname=stdy, storageName = storageN)  #/content/MyDrive/SimpleNN/
       print("Neurons ")
@@ -233,16 +229,14 @@ if __name__ == "__main__":
       #model3, mse, mae, mape = kfoldValidation(model2, newX6, Lb1, 10, 100, 384)
       #model4, testMSE, testMAE, testMAPE = kfoldTesting(predictorModel, newx6, lb1, 10, 100, 384)
       
-      print("1st target")
-      #size = 5
-      f = open(f"/home1/08389/hcs77/{shot}-{target_domain1}-indices.txt", "r")
-      nums = f.readlines()
-      index =0
       for i in range(5):
-        fileI = open(f"{result_path}csv/Source-model-on-target-{target_app}-LP{num_of_frozen_layers}-results-{i}.csv", "w")
+        fileI = open(f"{result_path}csv/Source-model-on-target-{target_app}-GAN-{num_of_frozen_layers}-results-{i}.csv", "w")
         writer = csv.writer(fileI)
         for j in range(1,10):
-          indices = open(f"{result_path}indices/Source-model-on-target-{target_app}-LP-1-indices-{i}-{j}-percent.csv", "r" )
+          if readModeOn  == True:
+            indices = open(f"{result_path}indices/Source-model-on-target-{target_app}-indices-{i}-{j}-percent.csv", "r" )
+          else:
+            indices = open(f"{result_path}indices/Source-model-on-target-{target_app}-indices-{i}-{j}-percent.csv", "w" )
           dropIndices = []
           rowArr = []
           x2 =[]
@@ -276,7 +270,7 @@ if __name__ == "__main__":
           
           #predictorModel.fit(x2, lb2, epochs=50)
           
-          subspace_parameters = subspacejsoptunaE.finder(X1, x2, Lb1, lb2, epochs=ep1, checkpoint_path=f"{chck_path}{target_app}-subspace/", num_of_trials=trials1, log_stepsP= 0, stname = stdy, storageName = storageN)        
+          subspace_parameters = subspacejsoptunaE.finder(X1, x2, Lb1, lb2, epochs=ep1, checkpoint_path=f"{chck_path}{target_app}-subspace/", num_of_trials=trials1, loss_type= 0, stname = stdy, storageName = storageN)        
           model = subspacejsoptunaE.Autoencoder(intermediate_dim=X1.shape[1], original_dim1=X1.shape[1], original_dim2=x2.shape[1], numOfLayers=subspace_parameters.params["num_layers"],neurons=subspace_parameters.params["neuron"], activation="relu")
           model.load_weights(f"/home1/08389/hcs77/subspace/{target_domain1}/{size}/{pos}/Loss Type-0-Trial-{subspace_representation6.number}-model")
           newX6 = model.getEncoded1(X1)
@@ -290,21 +284,12 @@ if __name__ == "__main__":
 
           pred = predictorModel.predict(newx6)
           testMSE = mean_squared_error(tlb1, pred)
-          testRSE = compute_rse(tlb1, pred)
-          testSMAPE = compute_smape(tlb1, pred)
-          print(f"{target_domain1}  mse is {testMSE}")
-          print(f"{target_domain1} rse is {testRSE}")
-          print(f"{target_domain1} smape is  {testSMAPE}")
-          worksheet.write(row, col + 4, testMSE)
-          worksheet.write(row, col + 5, testRSE)
-          #worksheet.write(row, col + 6, testSMAPE)
+          rowArr.append(testMSE)
+          writer.writerow(rowArr)
           plt.figure(figsize=(10,10))
           plt.scatter(tlb1, pred)
           plt.savefig(f"/home1/08389/hcs77/{shot}-{target_domain1}-{size}-shot-{pos}-subspace.pdf")
-          row = row + 1
-          index = index +1 
-        size = size + 5
-      f.close()
+        fileI.close() 
       
       """
       print("2nd target")
